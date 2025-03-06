@@ -11,8 +11,9 @@ from astrbot.api.star import Context, Star, register
 
 
 class WordleGame:
-    def __init__(self, answer: str):
+    def __init__(self, answer: str, valid_words: list[str]):
         self.answer = answer.upper()
+        self.valid_words = valid_words
         self.length = len(answer)
         self.max_attempts = self.length + 1
         self.guesses: list[str] = []
@@ -66,7 +67,9 @@ class WordleGame:
                     letter_x = x + (CELL_SIZE - text_width) // 2
                     letter_y = y + (CELL_SIZE - text_height) // 2
 
-                    draw.text((letter_x, letter_y), letter, fill=TEXT_COLOR, font=self._font)
+                    draw.text(
+                        (letter_x, letter_y), letter, fill=TEXT_COLOR, font=self._font
+                    )
 
         with BytesIO() as output:
             image.save(output, format="PNG")
@@ -78,25 +81,27 @@ class WordleGame:
 
         feedback = [0] * self.length
         answer_char_counts: dict[str, int] = {}
-        
+
         for i in range(self.length):
             if word[i] == self.answer[i]:
                 feedback[i] = 2
             else:
-                answer_char_counts[self.answer[i]] = answer_char_counts.get(self.answer[i], 0) + 1
-        
+                answer_char_counts[self.answer[i]] = (
+                    answer_char_counts.get(self.answer[i], 0) + 1
+                )
+
         for i in range(self.length):
             if feedback[i] != 2:
                 char = word[i]
                 if char in answer_char_counts and answer_char_counts[char] > 0:
                     feedback[i] = 1
                     answer_char_counts[char] -= 1
-        
+
         self.feedbacks.append(feedback)
         result = await self.gen_image()
 
         return result
-    
+
     @property
     def is_game_over(self):
         if not self.guesses:
@@ -121,7 +126,7 @@ class PluginWordle(Star):
         self.game_sessions: dict[str, WordleGame] = {}
 
     @staticmethod
-    async def get_answer(length):
+    async def get_answer(length) -> tuple[str, list[str]] | None:
         try:
             wordlist_path = os.path.join(
                 os.path.dirname(os.path.abspath(__file__)), "wordlist.txt"
@@ -143,7 +148,7 @@ class PluginWordle(Star):
                 if not filtered_words:
                     return None
 
-                return random.choice(filtered_words).upper()
+                return random.choice(filtered_words).upper(), filtered_words
         except Exception as e:
             logger.error(f"加载词表失败: {e!s}")
             return None
@@ -155,16 +160,20 @@ class PluginWordle(Star):
     @wordle.command("start")  # type: ignore
     async def start_wordle(self, event: AstrMessageEvent, length: int = 5):
         """开始Wordle游戏"""
-        answer = await self.get_answer(length)
+        result = await self.get_answer(length)
         session_id = event.unified_msg_origin
+        
         if session_id in self.game_sessions:
             del self.game_sessions[session_id]
-        if not answer:
+        
+        if not result:
             yield event.plain_result(f"未找到长度为{length}的单词")
-        else:
-            game = WordleGame(answer)
-            self.game_sessions[session_id] = game
-            logger.debug(f"答案是：{answer}")
+            return
+
+        answer, filtered_words = result
+        game = WordleGame(answer, filtered_words)
+        self.game_sessions[session_id] = game
+        logger.debug(f"答案是：{answer}")
 
     @wordle.command("stop")  # type: ignore
     async def stop_wordle(self, event: AstrMessageEvent):
@@ -183,7 +192,7 @@ class PluginWordle(Star):
         if session_id not in self.game_sessions:
             yield event.plain_result("当前未开始游戏")
             return
-            
+
         game = self.game_sessions[session_id]
         hint = f"提示: 第一个字母是 {game.answer[0]}"
         yield event.plain_result(hint)
@@ -198,7 +207,7 @@ class PluginWordle(Star):
             if msg.startswith("wordle start"):
                 yield event.plain_result("游戏已开始，请输入猜测")
                 return
-            
+
             if msg.startswith("wordle hint"):
                 return
 
@@ -206,15 +215,23 @@ class PluginWordle(Star):
             if len(msg) != length:
                 yield event.plain_result(f"输入单词长度应该为{length}")
                 return
-            
+
             if not msg.isalpha():
                 yield event.plain_result("输入应该是英文")
+                return
+            
+            if msg not in game.valid_words:
+                yield event.plain_result("该单词不在有效词表中，请重新输入")
                 return
 
             image_result = await game.guess(msg)
 
             if game.is_won:
-                sender_info = event.get_sender_name() if event.get_sender_name() else event.get_sender_id()
+                sender_info = (
+                    event.get_sender_name()
+                    if event.get_sender_name()
+                    else event.get_sender_id()
+                )
                 game_status = f"恭喜{sender_info}猜对了！正确答案是: {game.answer}"
                 del self.game_sessions[session_id]
             elif game.is_game_over:
