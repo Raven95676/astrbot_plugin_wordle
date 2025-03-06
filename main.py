@@ -162,10 +162,10 @@ class PluginWordle(Star):
         """开始Wordle游戏"""
         result = await self.get_answer(length)
         session_id = event.unified_msg_origin
-        
+
         if session_id in self.game_sessions:
             del self.game_sessions[session_id]
-        
+
         if not result:
             yield event.plain_result(f"未找到长度为{length}的单词")
             return
@@ -219,8 +219,8 @@ class PluginWordle(Star):
             if not msg.isalpha():
                 yield event.plain_result("输入应该是英文")
                 return
-            
-            if msg not in game.valid_words:
+
+            if msg.upper() not in game.valid_words:
                 yield event.plain_result("该单词不在有效词表中，请重新输入")
                 return
 
