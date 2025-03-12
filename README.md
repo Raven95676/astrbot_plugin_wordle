@@ -1,7 +1,7 @@
 # astrbot_plugin_wordle
 
 > [!important]
-> 正在准备对插件进行重构以支持会话控制功能。完成后，若 AstrBot 版本低于 v3.4.36 将无法使用本插件。
+> 正在准备对插件进行重构以支持会话控制功能。
 
 Astrbot wordle游戏，支持指定位数
 
