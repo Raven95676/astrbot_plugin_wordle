@@ -1,6 +1,6 @@
 name: astrbot_plugin_wordle
 desc: Astrbot wordle游戏，支持指定位数
 help: 输入 /wordle 查看帮助
-version: v1.0.0
+version: v1.0.1
 author: Raven95676
 repo: https://github.com/Raven95676/astrbot_plugin_wordle

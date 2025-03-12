@@ -117,7 +117,7 @@ class WordleGame:
     "astrbot_plugin_wordle",
     "Raven95676",
     "Astrbot wordle游戏，支持指定位数",
-    "1.0.0",
+    "1.0.1",
     "https://github.com/Raven95676/astrbot_plugin_wordle",
 )
 class PluginWordle(Star):
@@ -173,6 +173,7 @@ class PluginWordle(Star):
         answer, filtered_words = result
         game = WordleGame(answer, filtered_words)
         self.game_sessions[session_id] = game
+        yield event.plain_result("游戏已开始，请输入猜测")
         logger.debug(f"答案是：{answer}")
 
     @wordle.command("stop")  # type: ignore
@@ -204,11 +205,10 @@ class PluginWordle(Star):
         if session_id in self.game_sessions and event.is_at_or_wake_command:
             game = self.game_sessions[session_id]
 
-            if msg.startswith("wordle start"):
-                yield event.plain_result("游戏已开始，请输入猜测")
+            if "wordle start" in msg:
                 return
 
-            if msg.startswith("wordle hint"):
+            if "wordle hint" in msg:
                 return
 
             length = game.length
@@ -226,6 +226,14 @@ class PluginWordle(Star):
 
             image_result = await game.guess(msg)
 
+            # 保证兼容性
+            img_path = os.path.join(
+                os.path.dirname(os.path.abspath(__file__)),
+                f"{session_id}_{len(game.guesses)}_wordle.png",
+            )
+            with open(img_path, "wb") as f:
+                f.write(image_result)
+
             if game.is_won:
                 sender_info = (
                     event.get_sender_name()
@@ -240,9 +248,6 @@ class PluginWordle(Star):
             else:
                 game_status = f"已猜测 {len(game.guesses)}/{game.max_attempts} 次"
 
-            chain = [
-                Image.fromBytes(image_result),  # noqa: F405
-                Plain(game_status),  # noqa: F405
-            ]
+            await event.send(MessageChain().file_image(img_path).message(game_status))
 
-            yield event.chain_result(chain)
+            os.remove(img_path)
