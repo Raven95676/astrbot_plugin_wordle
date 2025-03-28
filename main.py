@@ -24,7 +24,7 @@ IGNORGE_MSG = [
     "astrbot_plugin_wordle",
     "Raven95676",
     "Astrbot wordle游戏，支持指定位数",
-    "1.0.1",
+    "1.2.0",
     "https://github.com/Raven95676/astrbot_plugin_wordle",
 )
 class PluginWordle(Star):

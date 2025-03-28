@@ -9,6 +9,7 @@ Astrbot wordle游戏，支持指定位数
 - wordle start [位数] - 开始一局游戏，位数可选，例如 wordle start 5
 - wordle stop - 终止游戏
 - wordle hint - 获取第一个字母
+- wordle octordle - 开始一局octordle游戏（同时猜8个wordle）
 
 如需替换词表，请替换插件根目录下的wordlist.txt
 

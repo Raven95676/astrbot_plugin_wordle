@@ -37,7 +37,7 @@ class WordleOctordle(WordleBase):
         self._guesses: list[str] = []
         self._feedbacks: list[list[list[int]]] = []
         self._keyboard_status = {chr(i + ord("A")): [-1] * GRID_SIZE for i in range(26)}
-        self._font = ImageFont.truetype("arial.ttf", FONT_SIZE)
+        self._font = ImageFont.load_default(FONT_SIZE)
 
     async def gen_image(self) -> bytes:
         img = Image.new("RGB", (WINDOW_WIDTH, WINDOW_HEIGHT), BACKGROUND_COLOR)
