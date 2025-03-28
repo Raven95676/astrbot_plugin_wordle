@@ -16,7 +16,8 @@ IGNORGE_MSG = [
     "wordle start",
     "wordle stop",
     "wordle hint",
-    "wordle octordle"
+    "wordle octordle",
+    "wordle dict",
 ]
 
 
@@ -31,17 +32,16 @@ class PluginWordle(Star):
     def __init__(self, context: Context):
         super().__init__(context)
         self.game_sessions: dict[str, WordleBase] = {}
+        self.current_dict = "classic"
+        self.dict_folder = os.path.join(
+            os.path.dirname(os.path.abspath(__file__)), "dict"
+        )
 
-    @staticmethod
-    async def get_answers(length, count: int = 1) -> tuple[list[str], list[str]] | None:
+    async def get_answers(
+        self, length, count: int = 1
+    ) -> tuple[list[str], list[str]] | None:
         try:
-            wordlist_path = os.path.join(
-                os.path.dirname(os.path.abspath(__file__)), "wordlist.txt"
-            )
-
-            if not os.path.exists(wordlist_path):
-                logger.error("词表文件不存在")
-                return None
+            wordlist_path = os.path.join(self.dict_folder, f"{self.current_dict}.txt")
 
             with open(wordlist_path, "r", encoding="utf-8") as file:
                 content = file.read()
@@ -130,6 +130,46 @@ class PluginWordle(Star):
             hints = [f"单词{i + 1}: {answer[0]}" for i, answer in enumerate(answers)]
             hint_text = "提示: 第一个字母\n" + "\n".join(hints)
             yield event.plain_result(hint_text)
+
+    @wordle.command("dict")
+    async def manage_dict(
+        self,
+        event: AstrMessageEvent,
+        action: str = "list",
+        dict_name: str | None = None,
+    ):
+        """管理词典"""
+        if action == "list":
+            dict_files = [
+                f.replace(".txt", "")
+                for f in os.listdir(self.dict_folder)
+                if f.endswith(".txt")
+            ]
+            if not dict_files:
+                yield event.plain_result("未找到任何词典文件，请先添加词典到dict文件夹")
+                return
+
+            msg = f"当前使用词典: {self.current_dict}\n可用词典列表:\n"
+            for dict_file in dict_files:
+                msg += f"- {dict_file}\n"
+            yield event.plain_result(msg)
+
+        elif action == "set":
+            if not dict_name:
+                yield event.plain_result(
+                    "请指定词典名称，例如: /wordle dict set classic"
+                )
+                return
+
+            dict_path = os.path.join(self.dict_folder, f"{dict_name}.txt")
+            if not os.path.exists(dict_path):
+                yield event.plain_result(f"词典 {dict_name} 不存在，请先添加词典文件")
+                return
+
+            self.current_dict = dict_name
+            yield event.plain_result(f"已设置当前词典为: {dict_name}")
+        else:
+            yield event.plain_result("未知操作，可用操作: list, set")
 
     @filter.event_message_type(EventMessageType.ALL)  # noqa: F405
     async def on_all_message(self, event: AstrMessageEvent):
