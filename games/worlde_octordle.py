@@ -21,11 +21,10 @@ CELL_COLORS = {
     -1: (211, 214, 218),
 }
 BACKGROUND_COLOR = (255, 255, 255)
-TEXT_COLOR = (255, 255, 255)
 KEYBOARD_COLORS = {
     2: CELL_COLORS[2],
     1: CELL_COLORS[1],
-    0: CELL_COLORS[0],
+    0: (211, 214, 218),
 }
 
 
@@ -37,7 +36,7 @@ class WordleOctordle(WordleBase):
         self._max_attempts = MAX_GUESSES
         self._guesses: list[str] = []
         self._feedbacks: list[list[list[int]]] = []
-        self._keyboard_status = {chr(i + ord("A")): 0 for i in range(26)}
+        self._keyboard_status = {chr(i + ord("A")): [-1] * GRID_SIZE for i in range(26)}
         self._font = ImageFont.truetype("arial.ttf", FONT_SIZE)
 
     async def gen_image(self) -> bytes:
@@ -84,7 +83,7 @@ class WordleOctordle(WordleBase):
                         draw.text(
                             (x + CELL_SIZE // 3, y + CELL_SIZE // 6),
                             guess[col],
-                            fill=TEXT_COLOR,
+                            fill=(255, 255, 255),
                             font=self._font,
                         )
                     else:
@@ -98,12 +97,32 @@ class WordleOctordle(WordleBase):
             for col_idx, letter in enumerate(keyboard_row):
                 x = start_x + col_idx * (CELL_SIZE + PADDING // 2)
                 y = keyboard_y + row_idx * (CELL_SIZE + PADDING // 2)
-                color = KEYBOARD_COLORS[self._keyboard_status[letter]]
-                draw.rectangle([x, y, x + CELL_SIZE, y + CELL_SIZE], fill=color)
+
+                draw.rectangle(
+                    [x, y, x + CELL_SIZE, y + CELL_SIZE], fill=KEYBOARD_COLORS[0]
+                )
+
+                cell_width = CELL_SIZE // 2
+                cell_height = CELL_SIZE // 2
+                for grid_idx in range(GRID_SIZE):
+                    grid_x = x + (grid_idx % 4) * (cell_width // 2)
+                    grid_y = y + (grid_idx // 4) * cell_height
+                    status = self._keyboard_status[letter][grid_idx]
+                    if status > 0:
+                        draw.rectangle(
+                            [
+                                grid_x,
+                                grid_y,
+                                grid_x + cell_width // 2,
+                                grid_y + cell_height,
+                            ],
+                            fill=KEYBOARD_COLORS[status],
+                        )
+
                 draw.text(
                     (x + CELL_SIZE // 3, y + CELL_SIZE // 6),
                     letter,
-                    fill=TEXT_COLOR,
+                    fill=(0, 0, 0),
                     font=self._font,
                 )
 
@@ -139,15 +158,13 @@ class WordleOctordle(WordleBase):
         self._feedbacks.append(grid_feedbacks)
 
         for letter in word:
-            max_status = 0
-            for grid_idx, answer in enumerate(self._answers):
+            for grid_idx, _ in enumerate(self._answers):
                 for i, char in enumerate(word):
                     if char == letter:
                         feedback_value = self._feedbacks[-1][grid_idx][i]
-                        max_status = max(max_status, feedback_value)
-
-            if max_status > self._keyboard_status.get(letter, 0):
-                self._keyboard_status[letter] = max_status
+                        current_status = self._keyboard_status[letter][grid_idx]
+                        if feedback_value > current_status:
+                            self._keyboard_status[letter][grid_idx] = feedback_value
 
         result = await self.gen_image()
         return result

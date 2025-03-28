@@ -184,7 +184,3 @@ class PluginWordle(Star):
             await event.send(MessageChain().file_image(img_path).message(game_status))
 
             os.remove(img_path)
-
-    def terminate(self):
-        """当插件被卸载/停用时会调用"""
-        del self.game_sessions
