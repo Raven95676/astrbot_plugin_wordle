@@ -13,7 +13,7 @@ class WordleClassic(WordleBase):
         self._max_attempts = self._length + 1
         self._guesses: list[str] = []
         self._feedbacks: list[list[int]] = []
-        self._font = ImageFont.load_default()
+        self._font = ImageFont.load_default(30)
 
     async def gen_image(self) -> bytes:
         CELL_COLORS = {
