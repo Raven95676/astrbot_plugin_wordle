@@ -10,6 +10,7 @@ Astrbot wordle游戏，支持指定位数
 - wordle stop - 终止游戏
 - wordle hint - 获取第一个字母
 - wordle octordle - 开始一局octordle游戏（同时猜8个wordle）
+- wordle dict - 管理词库
 
 如需替换词表，请替换插件根目录下的wordlist.txt
 
