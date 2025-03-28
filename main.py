@@ -158,8 +158,7 @@ class PluginWordle(Star):
             image_result = await game.guess(msg)
 
             # 保证兼容性,处理Windows下非法路径问题
-            if os.name == "nt":
-                session_id_ps = re.sub(r'[\\/:*?"<>|!]', "_", session_id)
+            session_id_ps = re.sub(r'[\\/:*?"<>|!]', "_", session_id)
             img_path = os.path.join(
                 os.path.dirname(os.path.abspath(__file__)),
                 f"{session_id_ps}_{len(game.guesses)}_wordle.png",
