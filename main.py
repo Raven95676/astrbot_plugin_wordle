@@ -8,9 +8,16 @@ from astrbot.api.star import Context, Star, register
 from astrbot.core.message.message_event_result import MessageChain
 from astrbot.core.star.filter.event_message_type import EventMessageType
 
-from .games import WordleBase, WordleClassic  # type: ignore
+from .games.common import WordleBase  # type: ignore
+from .games.wordle_classic import WordleClassic  # type: ignore
+from .games.worlde_octordle import WordleOctordle  # type: ignore
 
-IGNORGE_MSG = ["wordle start", "wordle stop", "wordle hint"]
+IGNORGE_MSG = [
+    "wordle start",
+    "wordle stop",
+    "wordle hint",
+    "wordle octordle"
+]
 
 
 @register(
@@ -76,6 +83,25 @@ class PluginWordle(Star):
         yield event.plain_result("游戏已开始，请输入猜测")
         logger.debug(f"答案是：{answer}")
 
+    @wordle.command("octordle")
+    async def start_octordle(self, event: AstrMessageEvent):
+        """开始Octordle游戏"""
+        result = await self.get_answers(5, 8)
+        session_id = event.unified_msg_origin
+
+        if session_id in self.game_sessions:
+            del self.game_sessions[session_id]
+
+        if not result:
+            yield event.plain_result("未找到足够的单词")
+            return
+
+        answers, filtered_words = result
+        game = WordleOctordle(answers, filtered_words)
+        self.game_sessions[session_id] = game
+        yield event.plain_result("Octordle游戏已开始，请输入猜测")
+        logger.debug(f"答案是：{answers}")
+
     @wordle.command("stop")
     async def stop_wordle(self, event: AstrMessageEvent):
         """中止Wordle游戏"""
@@ -95,8 +121,15 @@ class PluginWordle(Star):
             return
 
         game = self.game_sessions[session_id]
-        hint = f"提示: 第一个字母是 {game.answer[0]}"
-        yield event.plain_result(hint)
+
+        if isinstance(game, WordleClassic):
+            hint = f"提示: 第一个字母是 {game.answer[0]}"
+            yield event.plain_result(hint)
+        else:
+            answers = game.answer.split("/")
+            hints = [f"单词{i + 1}: {answer[0]}" for i, answer in enumerate(answers)]
+            hint_text = "提示: 第一个字母\n" + "\n".join(hints)
+            yield event.plain_result(hint_text)
 
     @filter.event_message_type(EventMessageType.ALL)  # noqa: F405
     async def on_all_message(self, event: AstrMessageEvent):
@@ -105,8 +138,8 @@ class PluginWordle(Star):
         if session_id in self.game_sessions and event.is_at_or_wake_command:
             game = self.game_sessions[session_id]
 
-            for IGNORGE in IGNORGE_MSG:
-                if IGNORGE in msg:
+            for ignore in IGNORGE_MSG:
+                if ignore in msg:
                     return
 
             length = game.length
@@ -126,10 +159,10 @@ class PluginWordle(Star):
 
             # 保证兼容性,处理Windows下非法路径问题
             if os.name == "nt":
-                session_id = re.sub(r'[\\/:*?"<>|!]', "_", session_id)
+                session_id_ps = re.sub(r'[\\/:*?"<>|!]', "_", session_id)
             img_path = os.path.join(
                 os.path.dirname(os.path.abspath(__file__)),
-                f"{session_id}_{len(game.guesses)}_wordle.png",
+                f"{session_id_ps}_{len(game.guesses)}_wordle.png",
             )
             with open(img_path, "wb") as f:
                 f.write(image_result)

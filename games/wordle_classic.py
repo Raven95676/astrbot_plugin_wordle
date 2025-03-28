@@ -2,7 +2,7 @@ from io import BytesIO
 
 from PIL import Image as ImageW
 from PIL import ImageDraw, ImageFont
-from .common import WordleBase
+from .common import WordleBase  # type: ignore
 
 
 class WordleClassic(WordleBase):
